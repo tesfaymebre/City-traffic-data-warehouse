@@ -1,10 +1,21 @@
 COMPOSE_FILE := docker/docker-compose.yml
 COMPOSE := docker compose --env-file .env -f $(COMPOSE_FILE)
 
-.PHONY: help env up down logs ps reset airflow-ui redash-ui dbt-debug load-sample trigger-load dbt-deps dbt-run dbt-test dbt-docs trigger-transform
+PYTHON ?= python3
+VENV ?= .venv
+PIP := $(VENV)/bin/pip
+RUFF := $(VENV)/bin/ruff
+PYTEST := $(VENV)/bin/pytest
+
+.PHONY: help env up down logs ps reset airflow-ui redash-ui dbt-debug load-sample trigger-load dbt-deps dbt-run dbt-test dbt-docs trigger-transform ci ci-install ci-lint ci-yaml ci-compose ci-test
 
 help:
 	@echo "Targets:"
+	@echo "  make ci               Run all CI checks locally (lint, yaml, compose, tests)"
+	@echo "  make ci-lint          Ruff lint (airflow, scripts)"
+	@echo "  make ci-yaml          Validate YAML files"
+	@echo "  make ci-compose       Validate docker-compose structure"
+	@echo "  make ci-test          Run pytest (airflow/tests)"
 	@echo "  make env              Create .env from .env.example (with secrets)"
 	@echo "  make up               Start the full stack"
 	@echo "  make down             Stop the stack"
@@ -22,6 +33,32 @@ help:
 
 env:
 	@bash scripts/bootstrap_env.sh
+
+# ---------------------------------------------------------------------------
+# Local CI (mirrors .github/workflows/ci.yml)
+# ---------------------------------------------------------------------------
+ci-install:
+	@test -d $(VENV) || $(PYTHON) -m venv $(VENV)
+	@$(PIP) install -q -r requirements-dev.txt
+
+ci-lint: ci-install
+	@echo "==> ruff check airflow scripts"
+	@$(RUFF) check airflow scripts
+
+ci-yaml: ci-install
+	@echo "==> validate YAML files"
+	@$(PYTHON) scripts/ci/validate_yaml.py
+
+ci-compose: ci-install
+	@echo "==> validate docker-compose.yml"
+	@$(PYTHON) scripts/ci/validate_compose.py
+
+ci-test: ci-install
+	@echo "==> pytest airflow/tests"
+	@$(PYTEST) airflow/tests -q
+
+ci: ci-lint ci-yaml ci-compose ci-test
+	@echo "All CI checks passed."
 
 up: env
 	@mkdir -p airflow/logs

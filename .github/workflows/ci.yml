@@ -28,50 +28,10 @@ jobs:
         run: ruff check airflow scripts
 
       - name: Validate YAML files
-        run: |
-          python - <<'PY'
-          import pathlib
-          import sys
-          import yaml
-
-          errors = []
-          for path in pathlib.Path(".").rglob("*.yml"):
-              if any(part in {".git", "dbt_packages", "target"} for part in path.parts):
-                  continue
-              try:
-                  yaml.safe_load(path.read_text())
-              except Exception as exc:
-                  errors.append(f"{path}: {exc}")
-
-          for path in pathlib.Path(".").rglob("*.yaml"):
-              if any(part in {".git", "dbt_packages", "target"} for part in path.parts):
-                  continue
-              try:
-                  yaml.safe_load(path.read_text())
-              except Exception as exc:
-                  errors.append(f"{path}: {exc}")
-
-          if errors:
-              print("\n".join(errors))
-              sys.exit(1)
-
-          print("All YAML files are valid.")
-          PY
+        run: python scripts/ci/validate_yaml.py
 
       - name: Validate Docker Compose file
-        run: |
-          python - <<'PY'
-          import pathlib
-          import yaml
-
-          compose_path = pathlib.Path("docker/docker-compose.yml")
-          data = yaml.safe_load(compose_path.read_text())
-          assert "services" in data, "docker-compose.yml must define services"
-          required = {"postgres", "airflow-webserver", "airflow-scheduler", "redash-server"}
-          missing = required - set(data["services"])
-          assert not missing, f"Missing services: {missing}"
-          print("docker-compose.yml structure is valid.")
-          PY
+        run: python scripts/ci/validate_compose.py
 
       - name: Run unit tests
         run: pytest airflow/tests -q

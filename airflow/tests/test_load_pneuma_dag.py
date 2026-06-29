@@ -14,10 +14,14 @@ def test_load_pneuma_dag_structure():
         "discover_csv_files",
         "load_all_csv_files",
         "validate_load_counts",
+        "trigger_dbt_transform",
     ):
         assert f'task_id="{task_id}"' in content
 
-    assert "inventory_raw_files >> discover_csv_files_task" in content
-    assert "trigger_dbt_transform" in content
+    # Task dependency chain (multi-line >> format)
+    assert "inventory_raw_files" in content
+    assert ">> discover_csv_files_task" in content
+    assert ">> load_all_csv_files_task" in content
+    assert ">> trigger_dbt_transform" in content
     assert "PostgresHook" in content
     assert "deploy_env" in content
