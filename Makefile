@@ -7,7 +7,7 @@ PIP := $(VENV)/bin/pip
 RUFF := $(VENV)/bin/ruff
 PYTEST := $(VENV)/bin/pytest
 
-.PHONY: help env up down logs ps reset airflow-ui redash-ui dbt-debug load-sample trigger-load dbt-deps dbt-run dbt-test dbt-docs trigger-transform ci ci-install ci-lint ci-yaml ci-compose ci-test
+.PHONY: help env up down logs ps reset airflow-ui redash-ui dbt-debug load-sample trigger-load dbt-deps dbt-run dbt-build dbt-test dbt-source-freshness dbt-docs trigger-transform ci ci-install ci-lint ci-yaml ci-compose ci-test
 
 help:
 	@echo "Targets:"
@@ -25,7 +25,9 @@ help:
 	@echo "  make dbt-debug        Test dbt connection inside Airflow container"
 	@echo "  make dbt-deps         Install dbt package dependencies"
 	@echo "  make dbt-run          Run dbt models (dev target)"
-	@echo "  make dbt-test         Run dbt tests (circuit-breaker checks)"
+	@echo "  make dbt-build        Run dbt build (models + tests, circuit breaker)"
+	@echo "  make dbt-test         Run dbt tests only"
+	@echo "  make dbt-source-freshness  Check raw source freshness"
 	@echo "  make dbt-docs         Generate and serve dbt docs at :8081"
 	@echo "  make load-sample      Load sample CSV into dev warehouse (CLI)"
 	@echo "  make trigger-load     Trigger load_pneuma_raw DAG in Airflow"
@@ -92,8 +94,14 @@ dbt-deps:
 dbt-run:
 	$(COMPOSE) run --rm --entrypoint dbt airflow-scheduler run --project-dir /opt/airflow/dbt --profiles-dir /opt/airflow/dbt --target dev
 
+dbt-build:
+	$(COMPOSE) run --rm --entrypoint dbt airflow-scheduler build --project-dir /opt/airflow/dbt --profiles-dir /opt/airflow/dbt --target dev
+
 dbt-test:
 	$(COMPOSE) run --rm --entrypoint dbt airflow-scheduler test --project-dir /opt/airflow/dbt --profiles-dir /opt/airflow/dbt --target dev
+
+dbt-source-freshness:
+	$(COMPOSE) run --rm --entrypoint dbt airflow-scheduler source freshness --project-dir /opt/airflow/dbt --profiles-dir /opt/airflow/dbt --target dev
 
 dbt-docs:
 	$(COMPOSE) run --rm --entrypoint dbt airflow-scheduler docs generate --project-dir /opt/airflow/dbt --profiles-dir /opt/airflow/dbt --target dev

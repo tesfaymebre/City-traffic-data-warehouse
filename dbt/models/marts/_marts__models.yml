@@ -20,6 +20,12 @@ models:
           - not_null
       - name: speed
         description: Instantaneous speed in meters per second.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 150
+              config:
+                tags: ["data_quality"]
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
@@ -45,6 +51,25 @@ models:
         description: Number of GPS samples recorded for the trip.
         tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+              max_value: 25000
+              config:
+                tags: ["data_quality"]
+      - name: max_speed
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 150
+              config:
+                tags: ["data_quality"]
+      - name: trip_duration_seconds
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 3600
+              config:
+                tags: ["data_quality"]
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
@@ -63,3 +88,22 @@ models:
         description: Number of distinct vehicle trips in the group.
         tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 1
+              max_value: 100000
+              config:
+                tags: ["data_quality"]
+      - name: avg_speed_mps
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 120
+              config:
+                tags: ["data_quality"]
+      - name: peak_speed_mps
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 150
+              config:
+                tags: ["data_quality"]

@@ -9,6 +9,11 @@ def test_transform_pneuma_dbt_dag_structure():
 
     assert dag_file.exists()
     assert 'dag_id="transform_pneuma_dbt"' in content
-    for task_id in ("dbt_deps", "dbt_run", "dbt_test", "dbt_docs_generate"):
+    for task_id in (
+        "dbt_deps",
+        "dbt_source_freshness",
+        "dbt_build",
+        "dbt_docs_generate",
+    ):
         assert f'task_id="{task_id}"' in content
-    assert "dbt_run >> dbt_test >> dbt_docs_generate" in content
+    assert "dbt_source_freshness >> dbt_build >> dbt_docs_generate" in content

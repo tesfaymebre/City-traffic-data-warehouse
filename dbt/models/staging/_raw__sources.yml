@@ -9,6 +9,10 @@ sources:
     tables:
       - name: vehicle_tracks
         description: Vehicle-level metadata extracted from each pNEUMA CSV file.
+        loaded_at_field: loaded_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 72, period: hour}
         columns:
           - name: track_id
             description: Unique vehicle identifier within a source file.
@@ -24,10 +28,15 @@ sources:
             description: Observation date parsed from the source filename.
           - name: area_code
             description: Downtown area code from the source filename (e.g. d1).
-          - name: time_window_start
-            description: Start of capture window (HHMM) from filename.
-          - name: time_window_end
-            description: End of capture window (HHMM) from filename.
+          - name: loaded_at
+            description: Timestamp when the row was loaded into the warehouse.
+        tests:
+          - dbt_expectations.expect_table_row_count_to_be_between:
+              min_value: 1
+              max_value: 10000000
+              config:
+                severity: error
+                tags: ["data_quality", "raw"]
 
       - name: trajectory_points
         description: Time-series GPS samples for each vehicle track.
@@ -46,3 +55,10 @@ sources:
             description: Instantaneous speed in m/s at this sample.
           - name: recorded_at
             description: Elapsed seconds from the start of the trajectory.
+        tests:
+          - dbt_expectations.expect_table_row_count_to_be_between:
+              min_value: 1
+              max_value: 50000000
+              config:
+                severity: error
+                tags: ["data_quality", "raw"]
