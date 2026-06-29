@@ -1,0 +1,48 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Raw pNEUMA trajectory data loaded by the Airflow `load_pneuma_raw` DAG.
+      One row per vehicle (tracks) and one row per GPS sample (points).
+    schema: raw
+    tables:
+      - name: vehicle_tracks
+        description: Vehicle-level metadata extracted from each pNEUMA CSV file.
+        columns:
+          - name: track_id
+            description: Unique vehicle identifier within a source file.
+          - name: vehicle_type
+            description: Detected vehicle class (Car, Motorcycle, Bus, etc.).
+          - name: traveled_distance
+            description: Total distance traveled by the vehicle in meters.
+          - name: avg_speed
+            description: Average speed over the full trajectory in m/s.
+          - name: source_file
+            description: Originating pNEUMA CSV filename.
+          - name: capture_date
+            description: Observation date parsed from the source filename.
+          - name: area_code
+            description: Downtown area code from the source filename (e.g. d1).
+          - name: time_window_start
+            description: Start of capture window (HHMM) from filename.
+          - name: time_window_end
+            description: End of capture window (HHMM) from filename.
+
+      - name: trajectory_points
+        description: Time-series GPS samples for each vehicle track.
+        columns:
+          - name: track_id
+            description: Foreign key to vehicle_tracks within the same source_file.
+          - name: source_file
+            description: Originating pNEUMA CSV filename.
+          - name: point_index
+            description: Zero-based sequence number along the trajectory.
+          - name: latitude
+            description: WGS84 latitude in degrees.
+          - name: longitude
+            description: WGS84 longitude in degrees.
+          - name: speed
+            description: Instantaneous speed in m/s at this sample.
+          - name: recorded_at
+            description: Elapsed seconds from the start of the trajectory.

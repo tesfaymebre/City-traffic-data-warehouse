@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: fct_trajectory_points
+    description: >
+      Fact table at GPS sample grain. Joins cleaned trajectory points with
+      vehicle metadata for downstream analytics and dashboards.
+    columns:
+      - name: track_id
+        tests:
+          - not_null
+      - name: source_file
+        tests:
+          - not_null
+      - name: point_index
+        tests:
+          - not_null
+      - name: vehicle_type
+        tests:
+          - not_null
+      - name: speed
+        description: Instantaneous speed in meters per second.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - track_id
+            - source_file
+            - point_index
+
+  - name: mart_vehicle_trip_summary
+    description: >
+      One row per vehicle trip with distance, duration, and speed aggregates.
+      Primary input for trip-level traffic analysis.
+    columns:
+      - name: track_id
+        tests:
+          - not_null
+      - name: source_file
+        tests:
+          - not_null
+      - name: vehicle_type
+        tests:
+          - not_null
+      - name: point_count
+        description: Number of GPS samples recorded for the trip.
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - track_id
+            - source_file
+
+  - name: mart_traffic_by_vehicle_type
+    description: >
+      Aggregated traffic mix and speed statistics by area, date, time window,
+      and vehicle type. Optimized for BI dashboards (Redash).
+    columns:
+      - name: vehicle_type
+        tests:
+          - not_null
+      - name: vehicle_count
+        description: Number of distinct vehicle trips in the group.
+        tests:
+          - not_null

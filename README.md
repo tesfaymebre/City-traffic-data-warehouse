@@ -55,6 +55,7 @@ make up
 # 3. Open UIs
 # Airflow:  http://localhost:8080  (admin / admin)
 # Redash:   http://localhost:5000  (create account on first visit)
+# dbt docs: http://localhost:8081  (after `make dbt-docs`)
 # Postgres: localhost:15432  (host port; containers still use postgres:5432 internally)
 ```
 
@@ -64,6 +65,9 @@ Useful commands:
 make ps          # container status
 make logs        # tail all logs
 make dbt-debug   # verify dbt → Postgres connection
+make dbt-run     # build staging + mart models
+make dbt-test    # run data quality tests
+make dbt-docs    # generate docs at http://localhost:8081
 make down        # stop services
 make reset       # stop + delete volumes (wipes all data)
 ```
