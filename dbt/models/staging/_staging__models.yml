@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: stg_vehicle_tracks
+    description: Cleaned vehicle-level records from raw pNEUMA extracts.
+    columns:
+      - name: track_id
+        description: Vehicle identifier within a source file.
+        tests:
+          - not_null
+      - name: vehicle_type
+        description: Normalized vehicle class label.
+        tests:
+          - not_null
+      - name: source_file
+        description: Originating CSV filename.
+        tests:
+          - not_null
+      - name: capture_date
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - track_id
+            - source_file
+
+  - name: stg_trajectory_points
+    description: Validated GPS samples with impossible coordinates filtered out.
+    columns:
+      - name: track_id
+        tests:
+          - not_null
+      - name: source_file
+        tests:
+          - not_null
+      - name: point_index
+        tests:
+          - not_null
+      - name: latitude
+        tests:
+          - not_null
+      - name: longitude
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - track_id
+            - source_file
+            - point_index

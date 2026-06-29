@@ -18,5 +18,6 @@ def test_load_pneuma_dag_structure():
         assert f'task_id="{task_id}"' in content
 
     assert "inventory_raw_files >> discover_csv_files_task" in content
+    assert "trigger_dbt_transform" in content
     assert "PostgresHook" in content
     assert "deploy_env" in content

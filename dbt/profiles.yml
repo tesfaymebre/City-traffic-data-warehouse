@@ -12,7 +12,7 @@ city_traffic:
       user: "{{ env_var('POSTGRES_USER', 'traffic_admin') }}"
       password: "{{ env_var('POSTGRES_PASSWORD', 'change_me') }}"
       dbname: traffic_dev
-      schema: staging
+      schema: public
       threads: 4
 
     staging:
@@ -22,7 +22,7 @@ city_traffic:
       user: "{{ env_var('POSTGRES_USER', 'traffic_admin') }}"
       password: "{{ env_var('POSTGRES_PASSWORD', 'change_me') }}"
       dbname: traffic_staging
-      schema: staging
+      schema: public
       threads: 4
 
     prod:
@@ -32,5 +32,5 @@ city_traffic:
       user: "{{ env_var('POSTGRES_USER', 'traffic_admin') }}"
       password: "{{ env_var('POSTGRES_PASSWORD', 'change_me') }}"
       dbname: traffic_prod
-      schema: staging
+      schema: public
       threads: 4

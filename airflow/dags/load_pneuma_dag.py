@@ -23,6 +23,7 @@ from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 DEFAULT_DEPLOY_ENV = os.environ.get("DEPLOY_ENV", "dev")
@@ -149,4 +150,16 @@ with DAG(
         python_callable=validate_load_counts,
     )
 
-    inventory_raw_files >> discover_csv_files_task >> load_all_csv_files_task >> validate_load
+    trigger_dbt_transform = TriggerDagRunOperator(
+        task_id="trigger_dbt_transform",
+        trigger_dag_id="transform_pneuma_dbt",
+        wait_for_completion=False,
+    )
+
+    (
+        inventory_raw_files
+        >> discover_csv_files_task
+        >> load_all_csv_files_task
+        >> validate_load
+        >> trigger_dbt_transform
+    )

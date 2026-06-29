@@ -202,6 +202,16 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # Serves generated dbt documentation (run `make dbt-docs` first)
+  dbt-docs:
+    image: nginx:alpine
+    container_name: traffic-dbt-docs
+    ports:
+      - "${DBT_DOCS_PORT:-8081}:80"
+    volumes:
+      - ../dbt/target:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   airflow-logs:
