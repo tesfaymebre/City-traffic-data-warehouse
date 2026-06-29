@@ -7,7 +7,7 @@ PIP := $(VENV)/bin/pip
 RUFF := $(VENV)/bin/ruff
 PYTEST := $(VENV)/bin/pytest
 
-.PHONY: help env up down logs ps reset airflow-ui redash-ui dbt-debug load-sample trigger-load dbt-deps dbt-run dbt-build dbt-test dbt-source-freshness dbt-docs trigger-transform ci ci-install ci-lint ci-yaml ci-compose ci-test
+.PHONY: help env up down logs ps reset airflow-ui redash-ui redash-bootstrap dbt-debug load-sample trigger-load dbt-deps dbt-run dbt-build dbt-test dbt-source-freshness dbt-docs trigger-transform ci ci-install ci-lint ci-yaml ci-compose ci-test
 
 help:
 	@echo "Targets:"
@@ -32,6 +32,8 @@ help:
 	@echo "  make load-sample      Load sample CSV into dev warehouse (CLI)"
 	@echo "  make trigger-load     Trigger load_pneuma_raw DAG in Airflow"
 	@echo "  make trigger-transform Trigger transform_pneuma_dbt DAG in Airflow"
+	@echo "  make redash-ui         Open Redash UI URL"
+	@echo "  make redash-bootstrap  Create Redash data source, queries, and dashboard"
 
 env:
 	@bash scripts/bootstrap_env.sh
@@ -83,7 +85,10 @@ airflow-ui:
 	@echo "Airflow UI: http://localhost:8080"
 
 redash-ui:
-	@echo "Redash UI: http://localhost:5000"
+	@echo "Redash UI: http://localhost:$${REDASH_PORT:-5000}"
+
+redash-bootstrap:
+	@$(PYTHON) scripts/redash/bootstrap_redash.py
 
 dbt-debug:
 	$(COMPOSE) run --rm --entrypoint dbt airflow-scheduler debug --project-dir /opt/airflow/dbt --profiles-dir /opt/airflow/dbt
