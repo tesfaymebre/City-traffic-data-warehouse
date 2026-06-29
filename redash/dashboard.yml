@@ -1,0 +1,72 @@
+dashboard:
+  name: City Traffic Overview
+  tags: [pneuma, traffic, athens]
+
+data_source:
+  name: Traffic Warehouse (dev)
+  type: pg
+  schema: marts
+
+queries:
+  - file: 01_total_vehicles.sql
+    name: "KPI: Total Vehicles"
+    visualization: counter
+    widget:
+      col: 0
+      row: 0
+      size_x: 3
+      size_y: 4
+
+  - file: 02_total_gps_points.sql
+    name: "KPI: Total GPS Points"
+    visualization: counter
+    widget:
+      col: 3
+      row: 0
+      size_x: 3
+      size_y: 4
+
+  - file: 03_vehicle_count_by_type.sql
+    name: "Vehicle Count by Type"
+    visualization: chart
+    chart_type: column
+    x_column: vehicle_type
+    y_columns: [vehicle_count]
+    widget:
+      col: 0
+      row: 4
+      size_x: 6
+      size_y: 8
+
+  - file: 04_avg_speed_by_vehicle_type.sql
+    name: "Average Speed by Vehicle Type"
+    visualization: chart
+    chart_type: column
+    x_column: vehicle_type
+    y_columns: [avg_speed_mps]
+    widget:
+      col: 6
+      row: 4
+      size_x: 6
+      size_y: 8
+
+  - file: 06_peak_speed_by_vehicle_type.sql
+    name: "Peak Speed by Vehicle Type"
+    visualization: chart
+    chart_type: column
+    x_column: vehicle_type
+    y_columns: [peak_speed_mps]
+    widget:
+      col: 0
+      row: 12
+      size_x: 6
+      size_y: 8
+
+  - file: 05_traffic_summary_table.sql
+    name: "Traffic Summary Detail"
+    visualization: table
+    widget:
+      col: 6
+      row: 12
+      size_x: 6
+      size_y: 8

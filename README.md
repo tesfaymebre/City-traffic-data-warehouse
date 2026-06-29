@@ -72,6 +72,31 @@ make down        # stop services
 make reset       # stop + delete volumes (wipes all data)
 ```
 
+### Redash dashboard (Task 4)
+
+After loading and transforming data:
+
+```bash
+# 1. Open Redash and create your account (first visit only)
+make redash-ui   # http://localhost:5000
+
+# 2. Copy your API key to .env
+#    User Settings → API Key → REDASH_API_KEY=...
+
+# 3. Bootstrap data source, queries, and dashboard from redash/
+make redash-bootstrap
+```
+
+Version-controlled assets live in `redash/`:
+
+| Path | Purpose |
+|------|---------|
+| `redash/queries/*.sql` | Dashboard SQL (queries `marts` schema) |
+| `redash/dashboard.yml` | Widget layout and visualization types |
+| `scripts/redash/bootstrap_redash.py` | Pushes assets to Redash via REST API |
+
+The **City Traffic Overview** dashboard includes KPI counters, vehicle mix charts, speed charts, and a detail table sourced from `mart_traffic_by_vehicle_type` and related marts.
+
 Place pNEUMA CSV files in `data/raw/` before running load DAGs (Task 1).
 
 ## Development (without Docker)
