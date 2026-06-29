@@ -58,5 +58,20 @@ jobs:
           print("All YAML files are valid.")
           PY
 
+      - name: Validate Docker Compose file
+        run: |
+          python - <<'PY'
+          import pathlib
+          import yaml
+
+          compose_path = pathlib.Path("docker/docker-compose.yml")
+          data = yaml.safe_load(compose_path.read_text())
+          assert "services" in data, "docker-compose.yml must define services"
+          required = {"postgres", "airflow-webserver", "airflow-scheduler", "redash-server"}
+          missing = required - set(data["services"])
+          assert not missing, f"Missing services: {missing}"
+          print("docker-compose.yml structure is valid.")
+          PY
+
       - name: Run unit tests
         run: pytest airflow/tests -q

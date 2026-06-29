@@ -6,6 +6,13 @@ def test_repo_layout_exists():
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[2]
-    expected = ["airflow/dags", "dbt/models", "docker", "scripts", "data/raw"]
+    expected = [
+        "airflow/dags",
+        "dbt/models",
+        "docker/docker-compose.yml",
+        "docker/postgres/init",
+        "scripts",
+        "data/raw",
+    ]
     for relative in expected:
         assert (root / relative).exists(), f"Missing directory: {relative}"
