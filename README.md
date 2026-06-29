@@ -24,21 +24,53 @@ A fully dockerized **ELT** data platform for city traffic trajectory data (pNEUM
 
 ## Environments
 
-We separate **dev**, **staging**, and **prod** via:
+We separate **dev**, **staging**, and **prod** using:
 
-- Docker Compose profiles / env files
-- dbt targets in `profiles.yml`
-- Airflow Variables and Connections per environment
+| Layer | Mechanism |
+|-------|-----------|
+| PostgreSQL | Separate databases: `traffic_dev`, `traffic_staging`, `traffic_prod` |
+| dbt | Targets in `dbt/profiles.yml` mapped to each database |
+| Airflow | `DEPLOY_ENV` variable selects which environment DAGs write to |
+| Schemas | `raw` → `staging` → `marts` inside each database |
 
-## Local setup
+Switch environments locally:
 
-> Docker Compose and service wiring are added in the next milestone.
+```bash
+# In .env
+DEPLOY_ENV=staging   # or prod
+make down && make up
+```
 
-1. Copy `.env.example` to `.env` and update credentials.
-2. Place pNEUMA CSV files in `data/raw/`.
-3. Follow `docs/` as each component is introduced.
+## Local setup (Docker)
 
-## Development
+**Prerequisites:** Docker Desktop, Make
+
+```bash
+# 1. Bootstrap secrets into .env
+make env
+
+# 2. Start the full stack (first run builds images — ~5-10 min)
+make up
+
+# 3. Open UIs
+# Airflow:  http://localhost:8080  (admin / admin)
+# Redash:   http://localhost:5000  (create account on first visit)
+# Postgres: localhost:15432  (host port; containers still use postgres:5432 internally)
+```
+
+Useful commands:
+
+```bash
+make ps          # container status
+make logs        # tail all logs
+make dbt-debug   # verify dbt → Postgres connection
+make down        # stop services
+make reset       # stop + delete volumes (wipes all data)
+```
+
+Place pNEUMA CSV files in `data/raw/` before running load DAGs (Task 1).
+
+## Development (without Docker)
 
 ```bash
 python -m venv .venv

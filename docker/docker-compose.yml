@@ -1,0 +1,207 @@
+# City Traffic Data Warehouse — local dockerized stack
+# Usage (from repo root): make up
+
+x-airflow-common: &airflow-common
+  build:
+    context: ..
+    dockerfile: docker/airflow/Dockerfile
+  env_file:
+    - ../.env
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+    # Warehouse connection — used by DAGs and dbt inside containers
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: 5432
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    DEPLOY_ENV: ${DEPLOY_ENV:-dev}
+    DBT_PROFILES_DIR: /opt/airflow/dbt
+    PNEUMA_DATA_DIR: /opt/airflow/data/raw
+    LOAD_SCRIPTS_DIR: /opt/airflow/scripts
+  volumes:
+    - ../airflow/dags:/opt/airflow/dags
+    - ../airflow/plugins:/opt/airflow/plugins
+    - ../dbt:/opt/airflow/dbt
+    - ../data/raw:/opt/airflow/data/raw
+    - ../scripts:/opt/airflow/scripts
+    - airflow-logs:/opt/airflow/logs
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+x-redash-environment: &redash-environment
+  REDASH_LOG_LEVEL: INFO
+  REDASH_REDIS_URL: redis://redis:6379/0
+  REDASH_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/redash
+  REDASH_SECRET_KEY: ${REDASH_SECRET_KEY}
+  REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
+  REDASH_WEB_WORKERS: 2
+
+services:
+  # ---------------------------------------------------------------------------
+  # Shared infrastructure
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: traffic-postgres
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: traffic-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Apache Airflow (orchestration)
+  # ---------------------------------------------------------------------------
+  airflow-init:
+    <<: *airflow-common
+    container_name: traffic-airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create \
+          --username "${AIRFLOW_ADMIN_USER:-admin}" \
+          --password "${AIRFLOW_ADMIN_PASSWORD:-admin}" \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email "${AIRFLOW_ADMIN_EMAIL:-admin@traffic.local}" || true
+        for env_db in dev:traffic_dev staging:traffic_staging prod:traffic_prod; do
+          env_name="$${env_db%%:*}"
+          db_name="$${env_db##*:}"
+          airflow connections delete "postgres_$${env_name}" 2>/dev/null || true
+          airflow connections add "postgres_$${env_name}" \
+            --conn-type postgres \
+            --conn-host postgres \
+            --conn-login "${POSTGRES_USER}" \
+            --conn-password "${POSTGRES_PASSWORD}" \
+            --conn-port 5432 \
+            --conn-schema "$${db_name}"
+        done
+        airflow variables set deploy_env "${DEPLOY_ENV:-dev}" || true
+        echo "Airflow init complete."
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: traffic-airflow-webserver
+    command: webserver
+    ports:
+      - "${AIRFLOW_WEB_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: traffic-airflow-scheduler
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "airflow", "jobs", "check", "--job-type", "SchedulerJob"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Redash (BI / dashboards)
+  # ---------------------------------------------------------------------------
+  redash-server:
+    image: redash/redash:10.1.0.b50633
+    platform: linux/amd64
+    container_name: traffic-redash-server
+    env_file:
+      - ../.env
+    environment:
+      <<: *redash-environment
+    command: server
+    ports:
+      - "${REDASH_PORT:-5000}:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redash-scheduler:
+    image: redash/redash:10.1.0.b50633
+    platform: linux/amd64
+    container_name: traffic-redash-scheduler
+    env_file:
+      - ../.env
+    environment:
+      <<: *redash-environment
+      QUEUES: celery
+    command: scheduler
+    depends_on:
+      - redash-server
+    restart: unless-stopped
+
+  redash-worker:
+    image: redash/redash:10.1.0.b50633
+    platform: linux/amd64
+    container_name: traffic-redash-worker
+    env_file:
+      - ../.env
+    environment:
+      <<: *redash-environment
+      QUEUES: queries,scheduled_queries,celery,schemas
+    command: worker
+    depends_on:
+      - redash-server
+    restart: unless-stopped
+
+  # One-shot container: initialize Redash DB schema
+  redash-init:
+    image: redash/redash:10.1.0.b50633
+    platform: linux/amd64
+    container_name: traffic-redash-init
+    env_file:
+      - ../.env
+    environment:
+      <<: *redash-environment
+    command: create_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres-data:
+  airflow-logs:
