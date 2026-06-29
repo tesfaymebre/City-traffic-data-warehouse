@@ -1,10 +1,11 @@
 """
 Airflow DAG: run dbt transformations after raw pNEUMA data is loaded.
 
-Circuit-breaker pattern:
-  dbt_run -> dbt_test -> dbt_docs_generate
-  If dbt_test fails, dbt_docs_generate never runs and marts stay unchanged
-  on the next scheduled run only after a successful test pass.
+Circuit-breaker pattern (dbt build):
+  source freshness -> dbt build -> dbt docs generate
+
+dbt build runs models and tests in dependency order. If a staging test fails,
+downstream mart models are NOT rebuilt — hard circuit breaker for prod tables.
 
 Environment:
   Uses Airflow Variable `deploy_env` (dev / staging / prod) passed to dbt --target.
@@ -52,7 +53,7 @@ with DAG(
     schedule="@daily",
     start_date=datetime(2024, 1, 1),
     catchup=False,
-    tags=["pneuma", "dbt", "transform", "elt"],
+    tags=["pneuma", "dbt", "transform", "elt", "data_quality"],
     doc_md=__doc__,
 ) as dag:
     dbt_deps = BashOperator(
@@ -60,15 +61,15 @@ with DAG(
         bash_command=dbt_cmd("deps"),
     )
 
-    dbt_run = BashOperator(
-        task_id="dbt_run",
-        bash_command=dbt_cmd("run"),
+    dbt_source_freshness = BashOperator(
+        task_id="dbt_source_freshness",
+        bash_command=dbt_cmd("source freshness"),
     )
 
-    # Circuit breaker: downstream docs only run if tests pass
-    dbt_test = BashOperator(
-        task_id="dbt_test",
-        bash_command=dbt_cmd("test"),
+    # build = run models + tests in DAG order (circuit breaker)
+    dbt_build = BashOperator(
+        task_id="dbt_build",
+        bash_command=dbt_cmd("build"),
     )
 
     dbt_docs_generate = BashOperator(
@@ -76,4 +77,4 @@ with DAG(
         bash_command=dbt_cmd("docs generate"),
     )
 
-    dbt_deps >> dbt_run >> dbt_test >> dbt_docs_generate
+    dbt_deps >> dbt_source_freshness >> dbt_build >> dbt_docs_generate
