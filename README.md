@@ -99,6 +99,10 @@ The **City Traffic Overview** dashboard includes KPI counters, vehicle mix chart
 
 Place pNEUMA CSV files in `data/raw/` before running load DAGs (Task 1).
 
+## Write-up (Task 5)
+
+See [docs/approach-and-decisions.md](docs/approach-and-decisions.md) for the short article on architecture choices, ELT rationale, and lessons learned.
+
 ## Development (without Docker)
 
 ```bash
