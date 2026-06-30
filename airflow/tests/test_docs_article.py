@@ -8,5 +8,6 @@ ARTICLE = Path(__file__).resolve().parents[2] / "docs" / "approach-and-decisions
 def test_approach_article_exists_and_covers_key_topics():
     assert ARTICLE.exists()
     content = ARTICLE.read_text(encoding="utf-8").lower()
-    for topic in ("elt", "dbt", "airflow", "redash", "dbt_expectations", "circuit breaker"):
+    topics = ("elt", "dbt", "airflow", "redash", "dbt_expectations", "circuit breaker", "slack")
+    for topic in topics:
         assert topic in content, f"Article should mention: {topic}"

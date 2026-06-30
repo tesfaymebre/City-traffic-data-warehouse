@@ -25,6 +25,7 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from slack_callbacks import task_failure_slack_alert
 
 DEFAULT_DEPLOY_ENV = os.environ.get("DEPLOY_ENV", "dev")
 RAW_DATA_DIR = os.environ.get("PNEUMA_DATA_DIR", "/opt/airflow/data/raw")
@@ -35,6 +36,7 @@ default_args = {
     "depends_on_past": False,
     "email_on_failure": False,
     "email_on_retry": False,
+    "on_failure_callback": task_failure_slack_alert,
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }

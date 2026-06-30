@@ -97,6 +97,34 @@ Version-controlled assets live in `redash/`:
 
 The **City Traffic Overview** dashboard includes KPI counters, vehicle mix charts, speed charts, and a detail table sourced from `mart_traffic_by_vehicle_type` and related marts.
 
+### Slack alerting (optional)
+
+Get notified in Slack when a DAG task fails (after retries are exhausted):
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → **From scratch**
+2. Choose your workspace and app name (e.g. `Traffic Warehouse Alerts`)
+3. **Incoming Webhooks** → toggle **On** → **Add New Webhook to Workspace**
+4. Pick a channel (e.g. `#data-alerts`) → **Allow**
+5. Copy the webhook URL into `.env`:
+   ```bash
+   SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T.../B.../...
+   ```
+6. Restart Airflow so it picks up the new env var:
+   ```bash
+   make down && make up
+   ```
+
+Both `load_pneuma_raw` and `transform_pneuma_dbt` use `on_failure_callback` to post DAG name, task, error, and a log link. If `SLACK_WEBHOOK_URL` is empty, alerting is silently disabled.
+
+**Important:** Alerts fire only after **all retries are exhausted** (default: 1 retry, 5-minute delay). A failed task shows `up_for_retry` in the UI first; expect the Slack message ~5 minutes later.
+
+Quick webhook test (no DAG failure needed):
+
+```bash
+docker compose --env-file .env -f docker/docker-compose.yml exec airflow-scheduler \
+  python -c "import json, os, urllib.request; urllib.request.urlopen(urllib.request.Request(os.environ['SLACK_WEBHOOK_URL'], data=json.dumps({'text':'Slack test OK'}).encode(), method='POST', headers={'Content-Type':'application/json'}))"
+```
+
 Place pNEUMA CSV files in `data/raw/` before running load DAGs (Task 1).
 
 ## Write-up (Task 5)

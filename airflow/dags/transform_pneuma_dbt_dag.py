@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
+from slack_callbacks import task_failure_slack_alert
 
 DEFAULT_DEPLOY_ENV = os.environ.get("DEPLOY_ENV", "dev")
 DBT_PROJECT_DIR = os.environ.get("DBT_PROJECT_DIR", "/opt/airflow/dbt")
@@ -28,6 +29,7 @@ default_args = {
     "depends_on_past": False,
     "email_on_failure": False,
     "email_on_retry": False,
+    "on_failure_callback": task_failure_slack_alert,
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
 }
