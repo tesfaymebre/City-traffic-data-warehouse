@@ -1,3 +1,5 @@
-# Architecture notes
+# Documentation
 
-This folder will hold design decisions, environment diagrams, and the final short article required by the challenge.
+| Document | Description |
+|----------|-------------|
+| [approach-and-decisions.md](./approach-and-decisions.md) | Week 2 challenge write-up — architecture, ELT approach, and key design decisions |
