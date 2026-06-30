@@ -119,13 +119,18 @@ Manual dashboard setup does not survive redeploys. We store SQL in `redash/queri
 
 **Why:** Matches the challenge's recommendation for query version control. Dashboards become reproducible infrastructure, not click-ops.
 
+### 10. Slack alerts on DAG failure
+
+Both Airflow DAGs register an `on_failure_callback` that posts to a Slack Incoming Webhook when `SLACK_WEBHOOK_URL` is set. The message includes the DAG, task, environment, error snippet, and a link to task logs. If the webhook is unset, the callback is a no-op — local dev works without Slack.
+
+**Why Slack over email:** No SMTP setup in Docker; free workspaces support Incoming Webhooks; common pattern on data teams.
+
 ---
 
 ## What we deliberately deferred
 
 | Item | Reason |
 |------|--------|
-| Slack/email alerting on DAG failure | Valuable for production; skipped to keep scope focused on core pipeline |
 | Auto-generating Airflow DAGs from dbt metadata | Powerful pattern (see [Astronomer guide](https://www.astronomer.io/blog/airflow-dbt-2/)), but overkill for five models |
 | Read-only Postgres role for Redash | Good security practice; `traffic_admin` is acceptable for local dev |
 | Great Expectations | Strong tool, but adds a separate checkpoint store beyond what dbt already provides |
